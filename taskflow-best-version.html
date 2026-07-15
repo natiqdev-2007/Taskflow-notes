@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow - Notes & Todos</title>
+<style>
+    :root {
+        --primary: #8b5cf6;
+        --primary-dark: #7c3aed;
+        --secondary: #6366f1;
+        --success: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --text: #0f172a;
+        --text-light: #64748b;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --border: #e2e8f0;
+        --shadow: rgba(0, 0, 0, 0.1);
+    }
+
+    [data-theme="purple"] {
+        --primary: #8b5cf6;
+        --primary-dark: #7c3aed;
+        --secondary: #a78bfa;
+    }
+
+    [data-theme="blue"] {
+        --primary: #3b82f6;
+        --primary-dark: #2563eb;
+        --secondary: #60a5fa;
+    }
+
+    [data-theme="green"] {
+        --primary: #10b981;
+        --primary-dark: #059669;
+        --secondary: #34d399;
+    }
+
+    [data-theme="orange"] {
+        --primary: #f97316;
+        --primary-dark: #ea580c;
+        --secondary: #fb923c;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        overflow-x: hidden;
+    }
+
+    button {
+        font-family: inherit;
+        cursor: pointer;
+        border: none;
+        background: none;
+        transition: transform 0.1s ease;
+    }
+
+    button:active {
+        transform: scale(0.96);
+    }
+
+    input, textarea, select {
+        font-family: inherit;
+        outline: none;
+    }
+
+    .app {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+        width: 280px;
+        background: var(--card);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 100;
+    }
+
+    .sidebar.collapsed {
+        transform: translateX(-280px);
+        position: absolute;
+    }
+
+    .sidebar-header {
+        padding: 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .logo {
+        font-size: 24px;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .sidebar-toggle {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-light);
+        transition: background 0.2s;
+    }
+
+    .sidebar-toggle:hover {
+        background: var(--bg);
+    }
+
+    .sidebar-nav {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+    }
+
+    .nav-item {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--text);
+        font-size: 15px;
+        font-weight: 500;
+        margin-bottom: 4px;
+        transition: all 0.2s;
+        text-align: left;
+    }
+
+    .nav-item:hover {
+        background: var(--bg);
+    }
+
+    .nav-item.active {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+    }
+
+    .nav-item .count {
+        margin-left: auto;
+        background: var(--bg);
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .nav-item.active .count {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .sidebar-footer {
+        padding: 16px;
+        border-top: 1px solid var(--border);
+    }
+
+    .theme-switcher {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .theme-btn {
+        height: 40px;
+        border-radius: 10px;
+        border: 2px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .theme-btn.active {
+        border-color: var(--text);
+        transform: scale(1.05);
+    }
+
+    .theme-btn.purple { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+    .theme-btn.blue { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
+    .theme-btn.green { background: linear-gradient(135deg, #10b981, #34d399); }
+    .theme-btn.orange { background: linear-gradient(135deg, #f97316, #fb923c); }
+
+    /* Main Content */
+    .main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .header {
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .mobile-menu-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+    }
+
+    .search-container {
+        flex: 1;
+        position: relative;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 16px 12px 44px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--bg);
+        font-size: 15px;
+        transition: all 0.2s;
+    }
+
+    .search-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-light);
+    }
+
+    .filter-tabs {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .filter-tab {
+        padding: 8px 16px;
+        border-radius: 10px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        font-size: 14px;
+        font-weight: 500;
+        white-space: nowrap;
+        transition: all 0.2s;
+    }
+
+    .filter-tab.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    /* Content Area */
+    .content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        position: relative;
+    }
+
+    .pull-indicator {
+        height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-light);
+        transition: height 0.2s;
+        overflow: hidden;
+    }
+
+    .pull-indicator.active {
+        height: 60px;
+    }
+
+    .items-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 16px;
+    }
+
+    /* Note Card */
+    .note-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .note-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px var(--shadow);
+        border-color: var(--primary);
+    }
+
+    .note-card.swiping {
+        transition: none;
+    }
+
+    .note-card.slide-out {
+        animation: slideOut 0.3s ease forwards;
+    }
+
+    @keyframes slideOut {
+        to {
+            transform: translateX(-120%);
+            opacity: 0;
+        }
+    }
+
+    .note-card.completed {
+        opacity: 0.7;
+    }
+
+    .note-card.completed .note-title {
+        text-decoration: line-through;
+    }
+
+    .category-tag {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 12px;
+    }
+
+    .category-tag.work { background: #dbeafe; color: #1e40af; }
+    .category-tag.personal { background: #fce7f3; color: #9f1239; }
+    .category-tag.ideas { background: #fef3c7; color: #92400e; }
+    .category-tag.todo { background: #d1fae5; color: #065f46; }
+
+    .note-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .note-checkbox {
+        width: 24px;
+        height: 24px;
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .note-checkbox.checked {
+        background: var(--success);
+        border-color: var(--success);
+    }
+
+    .note-checkbox.checked::after {
+        content: '✓';
+        color: white;
+        font-weight: 700;
+    }
+
+    .note-content-wrapper {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .note-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        word-break: break-word;
+    }
+
+    .note-description {
+        font-size: 14px;
+        color: var(--text-light);
+        margin-bottom: 12px;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-break: break-word;
+    }
+
+    .note-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 12px;
+        color: var(--text-light);
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .note-actions {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        display: flex;
+        gap: 4px;
+    }
+
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        color: var(--text-light);
+        transition: all 0.2s;
+        font-size: 14px;
+    }
+
+    .action-btn:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    .action-btn.active {
+        background: var(--primary);
+        color: white;
+    }
+
+    .tags-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 12px;
+    }
+
+    .tag {
+        padding: 4px 10px;
+        background: var(--bg);
+        border-radius: 6px;
+        font-size: 12px;
+        color: var(--text-light);
+    }
+
+    .progress-bar {
+        height: 6px;
+        background: var(--bg);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 12px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        transition: width 0.3s;
+    }
+
+    .due-date {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        background: var(--bg);
+        border-radius: 6px;
+        font-size: 12px;
+        margin-top: 8px;
+    }
+
+    .due-date.overdue {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    /* Empty State */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        padding: 40px;
+    }
+
+    .empty-icon {
+        font-size: 80px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .empty-title {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .empty-text {
+        color: var(--text-light);
+        margin-bottom: 24px;
+    }
+
+    /* FAB */
+    .fab {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        width: 64px;
+        height: 64px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        font-size: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 50;
+    }
+
+    .fab:hover {
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 12px 32px rgba(139, 92, 246, 0.5);
+    }
+
+    /* Modal */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+        padding: 20px;
+    }
+
+    .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .modal {
+        background: var(--card);
+        border-radius: 20px;
+        width: 100%;
+        max-width: 600px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        transform: scale(0.9);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-overlay.active .modal {
+        transform: scale(1);
+    }
+
+    .modal-header {
+        padding: 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .modal-title {
+        font-size: 20px;
+        font-weight: 600;
+    }
+
+    .modal-close {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+    }
+
+    .modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .form-input, .form-select, .form-textarea {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--bg);
+        font-size: 15px;
+        transition: all 0.2s;
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+
+    .form-textarea {
+        resize: vertical;
+        min-height: 120px;
+    }
+
+    .editor-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-bottom: none;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .editor-btn {
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .editor-btn.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .editor-content {
+        min-height: 150px;
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 0 0 12px 12px;
+        background: var(--bg);
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    .modal-footer {
+        padding: 20px 24px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 14px 24px;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+    }
+
+    .btn-secondary {
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+
+    /* Context Menu */
+    .context-menu {
+        position: fixed;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px var(--shadow);
+        padding: 8px;
+        z-index: 300;
+        min-width: 180px;
+        opacity: 0;
+        visibility: hidden;
+        transform: scale(0.9);
+        transition: all 0.2s;
+    }
+
+    .context-menu.active {
+        opacity: 1;
+        visibility: visible;
+        transform: scale(1);
+    }
+
+    .context-item {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+        text-align: left;
+        transition: background 0.2s;
+    }
+
+    .context-item:hover {
+        background: var(--bg);
+    }
+
+    .context-item.danger {
+        color: var(--danger);
+    }
+
+    /* Snackbar */
+    .snackbar {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: var(--text);
+        color: white;
+        padding: 14px 20px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        z-index: 400;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .snackbar.active {
+        transform: translateX(-50%) translateY(0);
+    }
+
+    .snackbar-action {
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    /* Checklist */
+    .checklist-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+    }
+
+    .checklist-input {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--bg);
+    }
+
+    .icon-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+    }
+
+    /* Confetti */
+    .confetti {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        pointer-events: none;
+        z-index: 500;
+    }
+
+    @keyframes confetti-fall {
+        to {
+            transform: translateY(100vh) rotate(720deg);
+            opacity: 0;
+        }
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            transform: translateX(-280px);
+        }
+
+        .sidebar.active {
+            transform: translateX(0);
+        }
+
+        .mobile-menu-btn {
+            display: flex;
+        }
+
+        .items-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .content {
+            padding: 16px;
+        }
+
+        .fab {
+            bottom: 20px;
+            right: 20px;
+        }
+    }
+
+    /* Overlay */
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 90;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+    }
+
+    .overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    .image-preview {
+        max-width: 100%;
+        border-radius: 12px;
+        margin-top: 12px;
+    }
+
+    .audio-player {
+        width: 100%;
+        margin-top: 12px;
+    }
+</style>
+</head>
+<body data-theme="purple">
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">TaskFlow</div>
+                <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-view="all">
+                    <span>📝</span>
+                    <span>All Notes</span>
+                    <span class="count" id="countAll">0</span>
+                </button>
+                <button class="nav-item" data-view="favorites">
+                    <span>⭐</span>
+                    <span>Favorites</span>
+                    <span class="count" id="countFavorites">0</span>
+                </button>
+                <button class="nav-item" data-view="archived">
+                    <span>📦</span>
+                    <span>Archived</span>
+                    <span class="count" id="countArchived">0</span>
+                </button>
+                <button class="nav-item" data-view="trash">
+                    <span>🗑️</span>
+                    <span>Trash</span>
+                    <span class="count" id="countTrash">0</span>
+                </button>
+                <button class="nav-item" data-view="settings">
+                    <span>⚙️</span>
+                    <span>Settings</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="theme-switcher">
+                    <button class="theme-btn purple active" data-theme="purple"></button>
+                    <button class="theme-btn blue" data-theme="blue"></button>
+                    <button class="theme-btn green" data-theme="green"></button>
+                    <button class="theme-btn orange" data-theme="orange"></button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <header class="header">
+                <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search by title, description, tags...">
+                </div>
+            </header>
+            <div class="content" id="content">
+                <div class="pull-indicator" id="pullIndicator">↓ Pull to refresh</div>
+                <div class="filter-tabs" id="filterTabs">
+                    <button class="filter-tab active" data-filter="all">All</button>
+                    <button class="filter-tab" data-filter="todo">Todos</button>
+                    <button class="filter-tab" data-filter="note">Notes</button>
+                    <button class="filter-tab" data-filter="work">Work</button>
+                    <button class="filter-tab" data-filter="personal">Personal</button>
+                    <button class="filter-tab" data-filter="ideas">Ideas</button>
+                </div>
+                <div class="items-grid" id="itemsGrid"></div>
+                <div class="empty-state hidden" id="emptyState">
+                    <div class="empty-icon">📄</div>
+                    <div class="empty-title">No notes yet</div>
+                    <div class="empty-text">Start organizing your thoughts and tasks</div>
+                    <button class="btn btn-primary" style="max-width: 200px;" id="emptyStateBtn">➕ Create your first note</button>
+                </div>
+            <button class="fab" id="fabBtn">+</button>
+        </main>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Create Note</h2>
+                <button class="modal-close" id="modalClose">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="noteForm">
+                    <div class="form-group">
+                        <label class="form-label">Title</label>
+                        <input type="text" class="form-input" id="noteTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" id="noteCategory">
+                            <option value="work">Work</option>
+                            <option value="personal">Personal</option>
+                            <option value="ideas">Ideas</option>
+                            <option value="todo">Todo</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="dueDateGroup" style="display:none;">
+                        <label class="form-label">Due Date</label>
+                        <input type="datetime-local" class="form-input" id="noteDueDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tags (comma separated)</label>
+                        <input type="text" class="form-input" id="noteTags" placeholder="urgent, meeting, etc">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Content</label>
+                        <div class="editor-toolbar">
+                            <button type="button" class="editor-btn" data-command="bold"><b>B</b></button>
+                            <button type="button" class="editor-btn" data-command="italic"><i>I</i></button>
+                            <button type="button" class="editor-btn" data-command="underline"><u>U</u></button>
+                            <button type="button" class="editor-btn" data-command="insertUnorderedList">• List</button>
+                            <button type="button" class="editor-btn" id="codeBlockBtn">&lt;/&gt; Code</button>
+                            <button type="button" class="editor-btn" id="imageBtn">🖼️ Image</button>
+                            <button type="button" class="editor-btn" id="voiceBtn">🎤 Voice</button>
+                        </div>
+                        <div class="editor-content" id="editorContent" contenteditable="true"></div>
+                        <input type="file" id="imageInput" accept="image/*" style="display:none;">
+                    </div>
+                    <div class="form-group" id="checklistGroup" style="display:none;">
+                        <label class="form-label">Checklist</label>
+                        <div id="checklistItems"></div>
+                        <button type="button" class="btn btn-secondary" id="addChecklistItem" style="margin-top:8px;">+ Add Item</button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="saveBtn">Save Note</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <button class="context-item" data-action="edit">
+            <span>✏️</span>
+            <span>Edit</span>
+        </button>
+        <button class="context-item" data-action="pin">
+            <span>📌</span>
+            <span>Pin</span>
+        </button>
+        <button class="context-item" data-action="favorite">
+            <span>⭐</span>
+            <span>Favorite</span>
+        </button>
+        <button class="context-item" data-action="archive">
+            <span>📦</span>
+            <span>Archive</span>
+        </button>
+        <button class="context-item danger" data-action="delete">
+            <span>🗑️</span>
+            <span>Delete</span>
+        </button>
+    </div>
+
+    <!-- Snackbar -->
+    <div class="snackbar" id="snackbar">
+        <span id="snackbarText"></span>
+        <button class="snackbar-action" id="snackbarAction"></button>
+    </div>
+
+<script>
+    // State Management
+    const state = {
+        notes: [],
+        currentView: 'all',
+        currentFilter: 'all',
+        searchQuery: '',
+        editingId: null,
+        contextNoteId: null,
+        deletedNote: null,
+        undoTimeout: null,
+        isRecording: false,
+        mediaRecorder: null,
+        audioChunks: []
+    };
+
+    // DOM Elements
+    const elements = {
+        sidebar: document.getElementById('sidebar'),
+        sidebarToggle: document.getElementById('sidebarToggle'),
+        mobileMenuBtn: document.getElementById('mobileMenuBtn'),
+        overlay: document.getElementById('overlay'),
+        searchInput: document.getElementById('searchInput'),
+        filterTabs: document.getElementById('filterTabs'),
+        itemsGrid: document.getElementById('itemsGrid'),
+        emptyState: document.getElementById('emptyState'),
+        emptyStateBtn: document.getElementById('emptyStateBtn'),
+        fabBtn: document.getElementById('fabBtn'),
+        modalOverlay: document.getElementById('modalOverlay'),
+        modalTitle: document.getElementById('modalTitle'),
+        modalClose: document.getElementById('modalClose'),
+        cancelBtn: document.getElementById('cancelBtn'),
+        saveBtn: document.getElementById('saveBtn'),
+        noteForm: document.getElementById('noteForm'),
+        noteTitle: document.getElementById('noteTitle'),
+        noteCategory: document.getElementById('noteCategory'),
+        noteTags: document.getElementById('noteTags'),
+        noteDueDate: document.getElementById('noteDueDate'),
+        dueDateGroup: document.getElementById('dueDateGroup'),
+        editorContent: document.getElementById('editorContent'),
+        imageInput: document.getElementById('imageInput'),
+        checklistGroup: document.getElementById('checklistGroup'),
+        checklistItems: document.getElementById('checklistItems'),
+        addChecklistItem: document.getElementById('addChecklistItem'),
+        contextMenu: document.getElementById('contextMenu'),
+        snackbar: document.getElementById('snackbar'),
+        snackbarText: document.getElementById('snackbarText'),
+        snackbarAction: document.getElementById('snackbarAction'),
+        pullIndicator: document.getElementById('pullIndicator'),
+        content: document.getElementById('content')
+    };
+
+    // Initialize
+    function init() {
+        loadNotes();
+        loadTheme();
+        renderNotes();
+        updateCounts();
+        attachEventListeners();
+        initPullToRefresh();
+    }
+
+    // LocalStorage
+    function loadNotes() {
+        const stored = localStorage.getItem('taskflow_notes');
+        state.notes = stored ? JSON.parse(stored) : [];
+    }
+
+    function saveNotes() {
+        localStorage.setItem('taskflow_notes', JSON.stringify(state.notes));
+        updateCounts();
+    }
+
+    function loadTheme() {
+        const theme = localStorage.getItem('taskflow_theme') || 'purple';
+        document.body.setAttribute('data-theme', theme);
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.theme === theme);
+        });
+    }
+
+    // Event Listeners
+    function attachEventListeners() {
+        // Sidebar
+        elements.sidebarToggle.addEventListener('click', toggleSidebar);
+        elements.mobileMenuBtn.addEventListener('click', toggleMobileSidebar);
+        elements.overlay.addEventListener('click', closeSidebar);
+
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => switchView(item.dataset.view));
+        });
+
+        // Theme
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchTheme(btn.dataset.theme));
+        });
+
+        // Search
+        elements.searchInput.addEventListener('input', (e) => {
+            state.searchQuery = e.target.value.toLowerCase();
+            renderNotes();
+        });
+
+        // Filter Tabs
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.addEventListener('click', () => switchFilter(tab.dataset.filter));
+        });
+
+        // FAB & Empty State
+        elements.fabBtn.addEventListener('click', openCreateModal);
+        elements.emptyStateBtn.addEventListener('click', openCreateModal);
+
+        // Modal
+        elements.modalClose.addEventListener('click', closeModal);
+        elements.cancelBtn.addEventListener('click', closeModal);
+        elements.saveBtn.addEventListener('click', saveNote);
+        elements.modalOverlay.addEventListener('click', (e) => {
+            if (e.target === elements.modalOverlay) closeModal();
+        });
+
+        // Category change
+        elements.noteCategory.addEventListener('change', (e) => {
+            const isTodo = e.target.value === 'todo';
+            elements.dueDateGroup.style.display = isTodo ? 'block' : 'none';
+            elements.checklistGroup.style.display = isTodo ? 'block' : 'none';
+        });
+
+        // Editor
+        document.querySelectorAll('.editor-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const cmd = btn.dataset.command;
+                if (cmd) {
+                    document.execCommand(cmd, false, null);
+                    btn.classList.toggle('active');
+                }
+            });
+        });
+
+        document.getElementById('codeBlockBtn').addEventListener('click', insertCodeBlock);
+        document.getElementById('imageBtn').addEventListener('click', () => elements.imageInput.click());
+        document.getElementById('voiceBtn').addEventListener('click', toggleVoiceRecord);
+        elements.imageInput.addEventListener('change', handleImageUpload);
+
+        // Checklist
+        elements.addChecklistItem.addEventListener('click', addChecklistItem);
+
+        // Context Menu
+        document.addEventListener('click', () => hideContextMenu());
+        document.querySelectorAll('.context-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handleContextAction(item.dataset.action);
+            });
+        });
+
+        // Snackbar
+        elements.snackbarAction.addEventListener('click', undoDelete);
+    }
+
+    // Sidebar
+    function toggleSidebar() {
+        elements.sidebar.classList.toggle('collapsed');
+    }
+
+    function toggleMobileSidebar() {
+        elements.sidebar.classList.add('active');
+        elements.overlay.classList.add('active');
+    }
+
+    function closeSidebar() {
+        elements.sidebar.classList.remove('active');
+        elements.overlay.classList.remove('active');
+    }
+
+    function switchView(view) {
+        state.currentView = view;
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.view === view);
+        });
+        if (window.innerWidth <= 768) closeSidebar();
+        renderNotes();
+    }
+
+    function switchTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('taskflow_theme', theme);
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.theme === theme);
+        });
+    }
+
+    function switchFilter(filter) {
+        state.currentFilter = filter;
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.filter === filter);
+        });
+        renderNotes();
+    }
+
+    // Modal
+    function openCreateModal() {
+        state.editingId = null;
+        elements.modalTitle.textContent = 'Create Note';
+        elements.noteForm.reset();
+        elements.editorContent.innerHTML = '';
+        elements.checklistItems.innerHTML = '';
+        elements.dueDateGroup.style.display = 'none';
+        elements.checklistGroup.style.display = 'none';
+        elements.modalOverlay.classList.add('active');
+    }
+
+    function openEditModal(id) {
+        const note = state.notes.find(n => n.id === id);
+        if (!note) return;
+        
+        state.editingId = id;
+        elements.modalTitle.textContent = 'Edit Note';
+        elements.noteTitle.value = note.title;
+        elements.noteCategory.value = note.category;
+        elements.noteTags.value = note.tags.join(', ');
+        elements.editorContent.innerHTML = note.content;
+        
+        const isTodo = note.category === 'todo';
+        elements.dueDateGroup.style.display = isTodo ? 'block' : 'none';
+        elements.checklistGroup.style.display = isTodo ? 'block' : 'none';
+        
+        if (note.dueDate) elements.noteDueDate.value = note.dueDate;
+        
+        if (note.checklist) {
+            elements.checklistItems.innerHTML = '';
+            note.checklist.forEach(item => addChecklistItem(item.text, item.checked));
+        }
+        
+        elements.modalOverlay.classList.add('active');
+    }
+
+    function closeModal() {
+        elements.modalOverlay.classList.remove('active');
+        state.editingId = null;
+        if (state.isRecording) stopRecording();
+    }
+
+    function saveNote() {
+        const title = elements.noteTitle.value.trim();
+        if (!title) {
+            showSnackbar('Please enter a title');
+            return;
+        }
+
+        const noteData = {
+            title,
+            category: elements.noteCategory.value,
+            content: elements.editorContent.innerHTML,
+            tags: elements.noteTags.value.split(',').map(t => t.trim()).filter(t => t),
+            dueDate: elements.noteDueDate.value || null,
+            checklist: getChecklistData(),
+            updatedAt: new Date().toISOString()
+        };
+
+        if (state.editingId) {
+            const index = state.notes.findIndex(n => n.id === state.editingId);
+            state.notes[index] = { ...state.notes[index], ...noteData };
+            showSnackbar('Note updated');
+        } else {
+            state.notes.unshift({
+                id: Date.now().toString(),
+                ...noteData,
+                createdAt: new Date().toISOString(),
+                pinned: false,
+                favorite: false,
+                archived: false,
+                deleted: false,
+                completed: false
+            });
+            showSnackbar('Note created');
+        }
+
+        saveNotes();
+        renderNotes();
+        closeModal();
+    }
+
+    // Checklist
+    function addChecklistItem(text = '', checked = false) {
+        const div = document.createElement('div');
+        div.className = 'checklist-item';
+        div.innerHTML = `
+            <input type="checkbox" ${checked ? 'checked' : ''}>
+            <input type="text" class="checklist-input" value="${text}" placeholder="Task item">
+            <button type="button" class="icon-btn remove-checklist">✕</button>
+        `;
+        div.querySelector('.remove-checklist').addEventListener('click', () => div.remove());
+        elements.checklistItems.appendChild(div);
+    }
+
+    function getChecklistData() {
+        return Array.from(elements.checklistItems.children).map(item => ({
+            text: item.querySelector('.checklist-input').value,
+            checked: item.querySelector('input[type="checkbox"]').checked
+        })).filter(item => item.text.trim());
+    }
+
+    // Editor
+    function insertCodeBlock() {
+        const code = prompt('Enter code:');
+        if (code) {
+            const pre = document.createElement('pre');
+            pre.style.cssText = 'background:#1e293b;color:#e2e8f0;padding:12px;border-radius:8px;overflow-x:auto;margin:8px 0;';
+            pre.textContent = code;
+            elements.editorContent.appendChild(pre);
+        }
+    }
+
+    function handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = document.createElement('img');
+                img.src = event.target.result;
+                img.className = 'image-preview';
+                elements.editorContent.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    async function toggleVoiceRecord() {
+        if (state.isRecording) {
+            stopRecording();
+        } else {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                state.mediaRecorder = new MediaRecorder(stream);
+                state.audioChunks = [];
+                
+                state.mediaRecorder.ondataavailable = (e) => {
+                    state.audioChunks.push(e.data);
+                };
+                
+                state.mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(state.audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = document.createElement('audio');
+                    audio.src = audioUrl;
+                    audio.controls = true;
+                    audio.className = 'audio-player';
+                    elements.editorContent.appendChild(audio);
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                state.mediaRecorder.start();
+                state.isRecording = true;
+                document.getElementById('voiceBtn').textContent = '⏹️ Stop';
+                showSnackbar('Recording...');
+            } catch (err) {
+                showSnackbar('Microphone access denied');
+            }
+        }
+    }
+
+    function stopRecording() {
+        if (state.mediaRecorder && state.isRecording) {
+            state.mediaRecorder.stop();
+            state.isRecording = false;
+            document.getElementById('voiceBtn').textContent = '🎤 Voice';
+        }
+    }
+
+    // Render
+    function renderNotes() {
+        const filtered = getFilteredNotes();
+        
+        if (filtered.length === 0) {
+            elements.itemsGrid.classList.add('hidden');
+            elements.emptyState.classList.remove('hidden');
+        } else {
+            elements.itemsGrid.classList.remove('hidden');
+            elements.emptyState.classList.add('hidden');
+            elements.itemsGrid.innerHTML = filtered.map(note => renderNoteCard(note)).join('');
+            attachCardListeners();
+        }
+    }
+
+    function getFilteredNotes() {
+        let filtered = state.notes.filter(note => {
+            // View filter
+            if (state.currentView === 'favorites' && !note.favorite) return false;
+            if (state.currentView === 'archived' && !note.archived) return false;
+            if (state.currentView === 'trash' && !note.deleted) return false;
+            if (state.currentView === 'all' && (note.archived || note.deleted)) return false;
+            
+            // Search
+            if (state.searchQuery) {
+                const searchLower = state.searchQuery;
+                const inTitle = note.title.toLowerCase().includes(searchLower);
+                const inContent = note.content.toLowerCase().includes(searchLower);
+                const inTags = note.tags.some(t => t.toLowerCase().includes(searchLower));
+                if (!inTitle && !inContent && !inTags) return false;
+            }
+            
+            // Category filter
+            if (state.currentFilter !== 'all' && note.category !== state.currentFilter) return false;
+            
+            return true;
+        });
+
+        // Sort: pinned first, then by date
+        filtered.sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return new Date(b.updatedAt) - new Date(a.updatedAt);
+        });
+
+        return filtered;
+    }
+
+    function renderNoteCard(note) {
+        const readingTime = Math.ceil(note.content.replace(/<[^>]*>/g, '').split(' ').length / 200);
+        const lastEdited = formatDate(note.updatedAt);
+        const progress = note.checklist ? 
+            (note.checklist.filter(c => c.checked).length / note.checklist.length * 100) : 0;
+        const isOverdue = note.dueDate && new Date(note.dueDate) < new Date();
+        
+        return `
+            <div class="note-card ${note.completed ? 'completed' : ''}" data-id="${note.id}">
+                <div class="note-actions">
+                    ${note.pinned ? '<button class="action-btn active" data-action="pin">📌</button>' : ''}
+                    ${note.favorite ? '<button class="action-btn active" data-action="favorite">⭐</button>' : ''}
+                </div>
+                <div class="category-tag ${note.category}">${note.category}</div>
+                <div class="note-header">
+                    ${note.category === 'todo' ? `
+                        <button class="note-checkbox ${note.completed ? 'checked' : ''}" data-action="toggle"></button>
+                    ` : ''}
+                    <div class="note-content-wrapper">
+                        <div class="note-title">${escapeHtml(note.title)}</div>
+                        <div class="note-description">${stripHtml(note.content)}</div>
+                    </div>
+                </div>
+                ${note.tags.length > 0 ? `
+                    <div class="tags-list">
+                        ${note.tags.map(tag => `<span class="tag">#${escapeHtml(tag)}</span>`).join('')}
+                    </div>
+                ` : ''}
+                ${note.checklist && note.checklist.length > 0 ? `
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width:${progress}%"></div>
+                    </div>
+                ` : ''}
+                ${note.dueDate ? `
+                    <div class="due-date ${isOverdue ? 'overdue' : ''}">
+                        <span>📅</span>
+                        <span>${formatDate(note.dueDate, true)}</span>
+                    </div>
+                ` : ''}
+                <div class="note-meta">
+                    <div class="meta-item">
+                        <span>📖</span>
+                        <span>${readingTime} min read</span>
+                    </div>
+                    <div class="meta-item">
+                        <span>🕒</span>
+                        <span>${lastEdited}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function attachCardListeners() {
+        document.querySelectorAll('.note-card').forEach(card => {
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let longPressTimer;
+            let isSwiping = false;
+
+            card.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                longPressTimer = setTimeout(() => {
+                    showContextMenu(e.touches[0].clientX, e.touches[0].clientY, card.dataset.id);
+                }, 500);
+            });
+
+            card.addEventListener('touchmove', (e) => {
+                const deltaX = e.touches[0].clientX - touchStartX;
+                const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+                
+                if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
+                    clearTimeout(longPressTimer);
+                    isSwiping = true;
+                    card.classList.add('swiping');
+                    card.style.transform = `translateX(${deltaX}px)`;
+                    card.style.opacity = 1 - Math.abs(deltaX) / 200;
+                }
+            });
+
+            card.addEventListener('touchend', (e) => {
+                clearTimeout(longPressTimer);
+                const deltaX = e.changedTouches[0].clientX - touchStartX;
+                
+                if (isSwiping) {
+                    card.classList.remove('swiping');
+                    if (Math.abs(deltaX) > 100) {
+                        deleteNote(card.dataset.id);
+                    } else {
+                        card.style.transform = '';
+                        card.style.opacity = '';
+                    }
+                    isSwiping = false;
+                }
+            });
+
+            card.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                showContextMenu(e.clientX, e.clientY, card.dataset.id);
+            });
+
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.note-checkbox')) {
+                    toggleComplete(card.dataset.id);
+                } else if (!e.target.closest('.note-actions')) {
+                    openEditModal(card.dataset.id);
+                }
+            });
+        });
+
+        document.querySelectorAll('[data-action]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const card = btn.closest('.note-card');
+                const id = card.dataset.id;
+                handleCardAction(btn.dataset.action, id);
+            });
+        });
+    }
+
+    // Note Actions
+    function handleCardAction(action, id) {
+        const note = state.notes.find(n => n.id === id);
+        if (!note) return;
+
+        switch (action) {
+            case 'pin':
+                note.pinned = !note.pinned;
+                break;
+            case 'favorite':
+                note.favorite = !note.favorite;
+                break;
+            case 'toggle':
+                toggleComplete(id);
+                return;
+        }
+
+        saveNotes();
+        renderNotes();
+    }
+
+    function toggleComplete(id) {
+        const note = state.notes.find(n => n.id === id);
+        if (!note) return;
+        
+        note.completed = !note.completed;
+        note.completedAt = note.completed ? new Date().toISOString() : null;
+        
+        if (note.completed) {
+            createConfetti();
+            showSnackbar('Task completed! 🎉');
+        }
+        
+        saveNotes();
+        renderNotes();
+    }
+
+    function deleteNote(id, fromContext = false) {
+        const index = state.notes.findIndex(n => n.id === id);
+        if (index === -1) return;
+
+        const card = document.querySelector(`[data-id="${id}"]`);
+        if (card && !state.deletedNote) {
+            card.classList.add('slide-out');
+            setTimeout(() => {
+                state.deletedNote = state.notes[index];
+                state.notes.splice(index, 1);
+                saveNotes();
+                renderNotes();
+                showSnackbar('Note deleted', 'Undo');
+                state.undoTimeout = setTimeout(() => {
+                    state.deletedNote = null;
+                }, 5000);
+            }, 300);
+        } else if (!fromContext) {
+            state.deletedNote = state.notes[index];
+            state.notes.splice(index, 1);
+            saveNotes();
+            renderNotes();
+            showSnackbar('Note deleted', 'Undo');
+            state.undoTimeout = setTimeout(() => {
+                state.deletedNote = null;
+            }, 5000);
+        }
+    }
+
+    function undoDelete() {
+        if (state.deletedNote) {
+            state.notes.unshift(state.deletedNote);
+            state.deletedNote = null;
+            clearTimeout(state.undoTimeout);
+            saveNotes();
+            renderNotes();
+            showSnackbar('Note restored');
+            elements.snackbar.classList.remove('active');
+        }
+    }
+
+    // Context Menu
+    function showContextMenu(x, y, noteId) {
+        state.contextNoteId = noteId;
+        elements.contextMenu.style.left = `${Math.min(x, window.innerWidth - 200)}px`;
+        elements.contextMenu.style.top = `${Math.min(y, window.innerHeight - 250)}px`;
+        elements.contextMenu.classList.add('active');
+    }
+
+    function hideContextMenu() {
+        elements.contextMenu.classList.remove('active');
+        state.contextNoteId = null;
+    }
+
+    function handleContextAction(action) {
+        const id = state.contextNoteId;
+        if (!id) return;
+
+        const note = state.notes.find(n => n.id === id);
+        if (!note) return;
+
+        switch (action) {
+            case 'edit':
+                openEditModal(id);
+                break;
+            case 'pin':
+                note.pinned = !note.pinned;
+                saveNotes();
+                renderNotes();
+                break;
+            case 'favorite':
+                note.favorite = !note.favorite;
+                saveNotes();
+                renderNotes();
+                break;
+            case 'archive':
+                note.archived = !note.archived;
+                saveNotes();
+                renderNotes();
+                showSnackbar(note.archived ? 'Note archived' : 'Note unarchived');
+                break;
+            case 'delete':
+                if (note.deleted) {
+                    const index = state.notes.findIndex(n => n.id === id);
+                    state.notes.splice(index, 1);
+                    saveNotes();
+                    renderNotes();
+                    showSnackbar('Note permanently deleted');
+                } else {
+                    note.deleted = true;
+                    saveNotes();
+                    renderNotes();
+                    showSnackbar('Moved to trash');
+                }
+                break;
+        }
+
+        hideContextMenu();
+    }
+
+    // Pull to Refresh
+    function initPullToRefresh() {
+        let startY = 0;
+        let isPulling = false;
+
+        elements.content.addEventListener('touchstart', (e) => {
+            if (elements.content.scrollTop === 0) {
+                startY = e.touches[0].clientY;
+                isPulling = true;
+            }
+        });
+
+        elements.content.addEventListener('touchmove', (e) => {
+            if (!isPulling) return;
+            const deltaY = e.touches[0].clientY - startY;
+            if (deltaY > 0 && deltaY < 100) {
+                elements.pullIndicator.classList.add('active');
+                elements.pullIndicator.textContent = deltaY > 60 ? '↑ Release to refresh' : '↓ Pull to refresh';
+            }
+        });
+
+        elements.content.addEventListener('touchend', (e) => {
+            if (!isPulling) return;
+            const deltaY = e.changedTouches[0].clientY - startY;
+            if (deltaY > 60) {
+                elements.pullIndicator.textContent = 'Refreshing...';
+                setTimeout(() => {
+                    renderNotes();
+                    elements.pullIndicator.classList.remove('active');
+                    showSnackbar('Refreshed');
+                }, 800);
+            } else {
+                elements.pullIndicator.classList.remove('active');
+            }
+            isPulling = false;
+        });
+    }
+
+    // Confetti
+    function createConfetti() {
+        const colors = ['#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.top = '-10px';
+            confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.animation = `confetti-fall ${1 + Math.random() * 2}s linear forwards`;
+            document.body.appendChild(confetti);
+            setTimeout(() => confetti.remove(), 3000);
+        }
+    }
+
+    // Snackbar
+    function showSnackbar(text, action = '') {
+        elements.snackbarText.textContent = text;
+        elements.snackbarAction.textContent = action;
+        elements.snackbar.classList.add('active');
+        
+        if (!action) {
+            setTimeout(() => elements.snackbar.classList.remove('active'), 3000);
+        }
+    }
+
+    // Utils
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function stripHtml(html) {
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        return div.textContent || div.innerText || '';
+    }
+
+    function formatDate(date, includeTime = false) {
+        const d = new Date(date);
+        const now = new Date();
+        const diff = now - d;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        
+        if (days === 0) {
+            if (includeTime) {
+                return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            }
+            return 'Today';
+        } else if (days === 1) {
+            return 'Yesterday';
+        } else if (days < 7) {
+            return `${days} days ago`;
+        } else {
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+    }
+
+    function updateCounts() {
+        document.getElementById('countAll').textContent = state.notes.filter(n => !n.archived && !n.deleted).length;
+        document.getElementById('countFavorites').textContent = state.notes.filter(n => n.favorite && !n.deleted).length;
+        document.getElementById('countArchived').textContent = state.notes.filter(n => n.archived && !n.deleted).length;
+        document.getElementById('countTrash').textContent = state.notes.filter(n => n.deleted).length;
+    }
+
+    // Settings
+    function switchView(view) {
+        if (view === 'settings') {
+            showSettings();
+        } else {
+            hideSettings();
+            state.currentView = view;
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.view === view);
+            });
+            if (window.innerWidth <= 768) closeSidebar();
+            renderNotes();
+        }
+    }
+
+    function showSettings() {
+        elements.itemsGrid.innerHTML = `
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;grid-column:1/-1;">
+                <h2 style="font-size:24px;margin-bottom:20px;">⚙️ Settings</h2>
+                <div style="margin-bottom:24px;">
+                    <h3 style="font-size:18px;margin-bottom:12px;">Profile</h3>
+                    <p style="color:var(--text-light);">Local-only app. No account required.</p>
+                </div>
+                <div style="margin-bottom:24px;">
+                    <h3 style="font-size:18px;margin-bottom:12px;">Export Data</h3>
+                    <div style="display:flex;gap:12px;">
+                        <button class="btn btn-secondary" id="exportJson">Export JSON</button>
+                        <button class="btn btn-secondary" id="exportCsv">Export CSV</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="font-size:18px;margin-bottom:12px;">About</h3>
+                    <p style="color:var(--text-light);">TaskFlow v1.0 - 100% Offline Notes & Todos</p>
+                </div>
+            </div>
+        `;
+        elements.emptyState.classList.add('hidden');
+        
+        document.getElementById('exportJson').addEventListener('click', exportJSON);
+        document.getElementById('exportCsv').addEventListener('click', exportCSV);
+    }
+
+    function hideSettings() {
+        elements.itemsGrid.innerHTML = '';
+    }
+
+    function exportJSON() {
+        const data = JSON.stringify(state.notes, null, 2);
+        downloadFile(data, 'taskflow-notes.json', 'application/json');
+        showSnackbar('Notes exported as JSON');
+    }
+
+    function exportCSV() {
+        const headers = ['Title', 'Category', 'Content', 'Tags', 'Created', 'Updated'];
+        const rows = state.notes.map(n => [
+            n.title,
+            n.category,
+            stripHtml(n.content).replace(/"/g, '""'),
+            n.tags.join('; '),
+            n.createdAt,
+            n.updatedAt
+        ]);
+        const csv = [headers, ...rows].map(row => 
+            row.map(cell => `"${cell}"`).join(',')
+        ).join('\n');
+        downloadFile(csv, 'taskflow-notes.csv', 'text/csv');
+        showSnackbar('Notes exported as CSV');
+    }
+
+    function downloadFile(content, filename, type) {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // Initialize app
+    init();
+</script>
+<script>(function(){document.addEventListener("click",function(e){var a=e.target.closest("[data-product-id]");if(!a)return;e.preventDefault();var pid=a.getAttribute("data-product-id");if(pid)parent.postMessage({type:"ecto-artifact-link-click",productId:pid},"*")})})();</script>
+</body>
+</html>
